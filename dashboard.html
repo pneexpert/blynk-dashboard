@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Arduino Blynk Web Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial; text-align: center; background: #f7f7f7; }
+    .card { background: white; padding: 20px; margin: 20px auto; width: 400px; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+    button { margin: 5px; padding: 10px 20px; border: none; border-radius: 5px; background: #2196F3; color: white; cursor: pointer; }
+    button.off { background: #f44336; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Arduino + Blynk Web Control</h2>
+    <p>Sensor Value: <span id="sensorValue">Loading...</span></p>
+    <button onclick="sendCommand(1)">Turn ON</button>
+    <button class="off" onclick="sendCommand(0)">Turn OFF</button>
+  </div>
+
+  <div class="card">
+    <h3>Sensor Chart</h3>
+    <canvas id="sensorChart"></canvas>
+  </div>
+
+  <script>
+    const token = "82Eoulfj3Eg47Nrij4HlallsD3SizZYG";  // 🔹 Replace with your Blynk token
+    const vPin = "V1";                      // 🔹 Virtual pin for sensor
+    const controlPin = "V2";                // 🔹 Virtual pin for control
+
+    const sensorValue = document.getElementById('sensorValue');
+
+    // Chart setup
+    const ctx = document.getElementById('sensorChart').getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [{
+          label: 'Sensor Value',
+          data: [],
+          borderColor: 'blue',
+          fill: false,
+        }]
+      }
+    });
+
+    // Read sensor value
+    function readValue() {
+      fetch(`https://blynk.cloud/external/api/get?token=${token}&${vPin}`)
+        .then(res => res.text())
+        .then(data => {
+          sensorValue.innerText = data;
+          updateChart(data);
+        });
+    }
+
+    // Update chart
+    function updateChart(value) {
+      const now = new Date().toLocaleTimeString();
+      chart.data.labels.push(now);
+      chart.data.datasets[0].data.push(parseFloat(value));
+      if(chart.data.labels.length > 20) {
+        chart.data.labels.shift();
+        chart.data.datasets[0].data.shift();
+      }
+      chart.update();
+    }
+
+    // Send command to Arduino
+    function sendCommand(state) {
+      fetch(`https://blynk.cloud/external/api/update?token=${token}&${controlPin}=${state}`)
+        .then(() => console.log('Command sent:', state));
+    }
+
+    // Auto-refresh every 2 seconds
+    setInterval(readValue, 2000);
+    readValue();
+  </script>
+</body>
+</html>
